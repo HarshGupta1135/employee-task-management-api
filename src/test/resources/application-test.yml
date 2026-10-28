@@ -1,0 +1,16 @@
+# Used by integration tests: an isolated in-memory database, no demo data, Hibernate statistics for query-count checks.
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+  jpa:
+    properties:
+      hibernate:
+        generate_statistics: true
+
+app:
+  seed:
+    enabled: false
+
+logging:
+  level:
+    org.hibernate.engine.internal.StatisticalLoggingSessionEventListener: WARN
