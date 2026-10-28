@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Task Manager</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234f46e5'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<!-- Sign in / register -->
+<main id="auth-view" class="auth" hidden>
+    <section class="auth-card">
+        <div class="brand brand-lg">
+            <span class="brand-mark" aria-hidden="true">&#10003;</span>
+            <span>Task Manager</span>
+        </div>
+        <p class="muted">Employee task management &middot; Spring Boot REST API</p>
+
+        <div class="tabs" role="tablist">
+            <button class="tab active" id="tab-login" type="button" role="tab" aria-selected="true">Sign in</button>
+            <button class="tab" id="tab-register" type="button" role="tab" aria-selected="false">Create account</button>
+        </div>
+
+        <p id="auth-message" class="form-alert" hidden></p>
+
+        <form id="login-form" novalidate>
+            <label class="field">
+                <span>Email</span>
+                <input name="email" type="email" autocomplete="username" required>
+                <small class="field-error" data-error-for="email"></small>
+            </label>
+            <label class="field">
+                <span>Password</span>
+                <input name="password" type="password" autocomplete="current-password" required>
+                <small class="field-error" data-error-for="password"></small>
+            </label>
+            <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+
+            <div class="demo">
+                <span class="muted">Demo accounts:</span>
+                <button type="button" class="chip" data-demo="admin">Admin</button>
+                <button type="button" class="chip" data-demo="alice">Alice (user)</button>
+                <button type="button" class="chip" data-demo="bob">Bob (user)</button>
+            </div>
+        </form>
+
+        <form id="register-form" novalidate hidden>
+            <label class="field">
+                <span>Full name</span>
+                <input name="fullName" autocomplete="name" required>
+                <small class="field-error" data-error-for="fullName"></small>
+            </label>
+            <label class="field">
+                <span>Email</span>
+                <input name="email" type="email" autocomplete="email" required>
+                <small class="field-error" data-error-for="email"></small>
+            </label>
+            <label class="field">
+                <span>Password</span>
+                <input name="password" type="password" autocomplete="new-password" required>
+                <small class="hint">At least 8 characters with a letter and a digit.</small>
+                <small class="field-error" data-error-for="password"></small>
+            </label>
+            <button class="btn btn-primary btn-block" type="submit">Create account</button>
+        </form>
+
+        <p class="auth-footer muted">
+            API docs: <a href="/swagger-ui.html" target="_blank" rel="noopener">Swagger UI</a>
+        </p>
+    </section>
+</main>
+
+<!-- Application -->
+<div id="app-view" hidden>
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true">&#10003;</span>
+            <span>Task Manager</span>
+        </div>
+        <nav class="nav" aria-label="Sections">
+            <button class="nav-link active" type="button" data-view="tasks">Tasks</button>
+            <button class="nav-link" type="button" data-view="users" id="nav-users" hidden>Employees</button>
+        </nav>
+        <div class="user-box">
+            <span id="current-user-name"></span>
+            <span id="current-user-role" class="badge"></span>
+            <button id="logout-btn" class="btn btn-ghost btn-sm" type="button">Sign out</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Tasks -->
+        <section id="tasks-view">
+            <div class="page-head">
+                <div>
+                    <h1>Tasks</h1>
+                    <p class="muted" id="tasks-subtitle"></p>
+                </div>
+                <button id="new-task-btn" class="btn btn-primary" type="button">+ New task</button>
+            </div>
+
+            <div class="toolbar">
+                <input id="filter-search" type="search" placeholder="Search title or description" maxlength="100" aria-label="Search">
+                <select id="filter-status" aria-label="Status filter">
+                    <option value="">All statuses</option>
+                    <option value="TODO">To do</option>
+                    <option value="IN_PROGRESS">In progress</option>
+                    <option value="DONE">Done</option>
+                </select>
+                <select id="filter-priority" aria-label="Priority filter">
+                    <option value="">All priorities</option>
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                </select>
+                <select id="filter-assignee" aria-label="Assignee filter" hidden>
+                    <option value="">All assignees</option>
+                </select>
+                <select id="sort" aria-label="Sort order">
+                    <option value="createdAt,desc">Newest first</option>
+                    <option value="createdAt,asc">Oldest first</option>
+                    <option value="dueDate,asc">Due date (soonest)</option>
+                    <option value="dueDate,desc">Due date (latest)</option>
+                    <option value="priority,desc">Priority (highest)</option>
+                    <option value="priority,asc">Priority (lowest)</option>
+                    <option value="title,asc">Title (A&ndash;Z)</option>
+                    <option value="status,asc">Status</option>
+                </select>
+            </div>
+
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Assignee</th>
+                        <th>Due</th>
+                        <th class="actions-col"><span class="sr-only">Actions</span></th>
+                    </tr>
+                    </thead>
+                    <tbody id="task-rows"></tbody>
+                </table>
+                <p id="tasks-empty" class="empty" hidden>No tasks match your filters.</p>
+            </div>
+
+            <div class="pagination">
+                <span id="page-info" class="muted"></span>
+                <div class="pagination-controls">
+                    <label class="muted page-size">
+                        Rows
+                        <select id="page-size" aria-label="Rows per page">
+                            <option>5</option>
+                            <option selected>10</option>
+                            <option>20</option>
+                            <option>50</option>
+                        </select>
+                    </label>
+                    <button id="prev-page" class="btn btn-ghost btn-sm" type="button">&larr; Prev</button>
+                    <span id="page-number" class="muted"></span>
+                    <button id="next-page" class="btn btn-ghost btn-sm" type="button">Next &rarr;</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users (admin) -->
+        <section id="users-view" hidden>
+            <div class="page-head">
+                <div>
+                    <h1>Employees</h1>
+                    <p class="muted">Promote or demote accounts. You cannot change your own role.</p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Joined</th>
+                        <th>Role</th>
+                    </tr>
+                    </thead>
+                    <tbody id="user-rows"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Create / edit task -->
+<dialog id="task-dialog" aria-labelledby="task-dialog-title">
+    <form id="task-form" method="dialog" novalidate>
+        <header class="dialog-head">
+            <h2 id="task-dialog-title">New task</h2>
+            <button type="button" class="icon-btn" data-close aria-label="Close">&times;</button>
+        </header>
+
+        <p id="task-form-alert" class="form-alert" hidden></p>
+
+        <label class="field">
+            <span>Title</span>
+            <input name="title" required maxlength="150">
+            <small class="field-error" data-error-for="title"></small>
+        </label>
+        <label class="field">
+            <span>Description</span>
+            <textarea name="description" rows="3" maxlength="2000"></textarea>
+            <small class="field-error" data-error-for="description"></small>
+        </label>
+        <div class="grid-2">
+            <label class="field">
+                <span>Priority</span>
+                <select name="priority">
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM" selected>Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                </select>
+                <small class="field-error" data-error-for="priority"></small>
+            </label>
+            <label class="field">
+                <span>Status</span>
+                <select name="status">
+                    <option value="TODO">To do</option>
+                    <option value="IN_PROGRESS">In progress</option>
+                    <option value="DONE">Done</option>
+                </select>
+                <small class="field-error" data-error-for="status"></small>
+            </label>
+        </div>
+        <div class="grid-2">
+            <label class="field">
+                <span>Due date</span>
+                <input name="dueDate" type="date">
+                <small class="field-error" data-error-for="dueDate"></small>
+            </label>
+            <label class="field">
+                <span>Assignee</span>
+                <select name="assigneeId" id="assignee-select"></select>
+                <input id="assignee-readonly" type="text" readonly hidden>
+                <small class="field-error" data-error-for="assigneeId"></small>
+            </label>
+        </div>
+
+        <footer class="dialog-foot">
+            <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+            <button type="submit" class="btn btn-primary" id="task-submit">Save</button>
+        </footer>
+    </form>
+</dialog>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
