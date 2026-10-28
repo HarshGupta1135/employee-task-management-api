@@ -1,0 +1,53 @@
+# Full stack: Spring Boot API + PostgreSQL + Redis.
+#   docker compose up --build
+# Then open http://localhost:8080 (override the host port with APP_PORT=9090 if 8080 is taken).
+name: task-manager
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: taskdb
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpass
+    ports:
+      # Published on 5433 to avoid clashing with a PostgreSQL already installed on the host.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d taskdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    image: task-manager:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres,redis
+      DB_URL: jdbc:postgresql://postgres:5432/taskdb
+      DB_USERNAME: taskuser
+      DB_PASSWORD: taskpass
+      REDIS_HOST: redis
+      # Demo value only. Set JWT_SECRET (Base64, at least 32 bytes) for anything beyond local testing.
+      JWT_SECRET: ${JWT_SECRET:-dGFzay1tYW5hZ2VyLWRvY2tlci1jb21wb3NlLXNlY3JldC1rZXktY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
