@@ -1,0 +1,9 @@
+# Redis cache profile: activate with SPRING_PROFILES_ACTIVE=redis
+spring:
+  cache:
+    type: redis
+
+management:
+  health:
+    redis:
+      enabled: true

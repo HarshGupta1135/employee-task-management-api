@@ -1,0 +1,9 @@
+# PostgreSQL profile: activate with SPRING_PROFILES_ACTIVE=postgres
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/taskdb}
+    username: ${DB_USERNAME:taskuser}
+    password: ${DB_PASSWORD:taskpass}
+  h2:
+    console:
+      enabled: false
